@@ -1,0 +1,52 @@
+version: '4.38.0'
+
+services:
+  db:
+    image: postgres:13.8-alpine
+    container_name: db
+    restart: always
+    ports:
+      - "6541:5432"
+    environment:
+      POSTGRES_DB: crud_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: iamroot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+
+  core-service:
+    build:
+      context: ./core-service
+      dockerfile: Dockerfile
+    container_name: core-service
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/crud_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: iamroot
+    networks:
+      - app-network
+
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    depends_on:
+      - core-service
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
